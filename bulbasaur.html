@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bulbasaur - Pokédex</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        h1 {
+            color: #4CAF50;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            text-align: left;
+        }
+        img {
+            width: 150px;
+        }
+        .abilities, .stats, .types, .games, .evolution {
+            margin-top: 10px;
+        }
+        .games {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 5px;
+        }
+        .cries audio {
+            margin-top: 10px;
+            display: block;
+        }
+        .evolution img {
+            width: 100px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Bulbasaur</h1>
+    <div class="container">
+        <img id="pokemon-image" src="" alt="Bulbasaur">
+        <p><strong>Base Experience:</strong> <span id="base-exp"></span></p>
+        <p><strong>Height:</strong> <span id="height"></span> dm</p>
+        <p><strong>Weight:</strong> <span id="weight"></span> hg</p>
+
+        <div class="abilities">
+            <h3>Abilities</h3>
+            <ul id="abilities-list"></ul>
+        </div>
+
+        <div class="types">
+            <h3>Types</h3>
+            <ul id="types-list"></ul>
+        </div>
+
+        <div class="stats">
+            <h3>Stats</h3>
+            <ul id="stats-list"></ul>
+        </div>
+
+        <div class="games">
+            <h3>Appears In</h3>
+            <ul id="games-list"></ul>
+        </div>
+
+        <div class="cries">
+            <h3>Cries</h3>
+            <audio controls>
+                <source id="latest-cry" src="" type="audio/ogg">
+                Your browser does not support the audio element.
+            </audio>
+        </div>
+
+        <div class="evolution">
+            <h3>Evolution Chain</h3>
+            <div id="evolution-chain"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const apiUrl = "https://pokeapi.co/api/v2/pokemon/bulbasaur";
+            const speciesUrl = "https://pokeapi.co/api/v2/pokemon-species/1/"; // Bulbasaur species
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("pokemon-image").src = data.sprites.front_default;
+                    document.getElementById("base-exp").textContent = data.base_experience;
+                    document.getElementById("height").textContent = data.height;
+                    document.getElementById("weight").textContent = data.weight;
+                    document.getElementById("latest-cry").src = data.cries.latest;
+
+                    // Abilities
+                    const abilitiesList = document.getElementById("abilities-list");
+                    data.abilities.forEach(ability => {
+                        let listItem = document.createElement("li");
+                        listItem.innerHTML = `<a href="${ability.ability.url}" target="_blank">${ability.ability.name}</a>`;
+                        abilitiesList.appendChild(listItem);
+                    });
+
+                    // Types
+                    const typesList = document.getElementById("types-list");
+                    data.types.forEach(type => {
+                        let listItem = document.createElement("li");
+                        listItem.innerHTML = `<a href="${type.type.url}" target="_blank">${type.type.name}</a>`;
+                        typesList.appendChild(listItem);
+                    });
+
+                    // Stats
+                    const statsList = document.getElementById("stats-list");
+                    data.stats.forEach(stat => {
+                        let listItem = document.createElement("li");
+                        listItem.innerHTML = `<a href="${stat.stat.url}" target="_blank">${stat.stat.name}: ${stat.base_stat}</a>`;
+                        statsList.appendChild(listItem);
+                    });
+
+                    // Games Appeared In
+                    const gamesList = document.getElementById("games-list");
+                    data.game_indices.forEach(game => {
+                        let listItem = document.createElement("li");
+                        listItem.innerHTML = `<a href="${game.version.url}" target="_blank">${game.version.name}</a>`;
+                        gamesList.appendChild(listItem);
+                    });
+
+                    // Fetch Evolution Chain
+                    fetch(speciesUrl)
+                        .then(response => response.json())
+                        .then(speciesData => {
+                            const evolutionChainUrl = speciesData.evolution_chain.url;
+                            fetchEvolutionChain(evolutionChainUrl);
+                        });
+                })
+                .catch(error => console.error("Error fetching data:", error));
+
+            function fetchEvolutionChain(url) {
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        const evolutionChainDiv = document.getElementById("evolution-chain");
+                        let evoChain = [];
+                        let evoData = data.chain;
+
+                        do {
+                            evoChain.push({
+                                name: evoData.species.name,
+                                url: `https://pokeapi.co/api/v2/pokemon/${evoData.species.name}`
+                            });
+                            evoData = evoData.evolves_to[0]; // Move to next evolution
+                        } while (evoData !== undefined);
+
+                        evoChain.forEach(evo => {
+                            fetch(`https://pokeapi.co/api/v2/pokemon/${evo.name}`)
+                                .then(response => response.json())
+                                .then(pokemonData => {
+                                    const evoImage = document.createElement("img");
+                                    evoImage.src = pokemonData.sprites.front_default;
+                                    evoImage.alt = evo.name;
+
+                                    const evoLink = document.createElement("a");
+                                    evoLink.href = evo.url;
+                                    evoLink.target = "_blank";
+                                    evoLink.appendChild(evoImage);
+
+                                    evolutionChainDiv.appendChild(evoLink);
+                                });
+                        });
+                    })
+                    .catch(error => console.error("Error fetching evolution chain:", error));
+            }
+        });
+    </script>
+
+</body>
+</html>
